@@ -1,21 +1,31 @@
 """
-English to Kannada Translator - GUI Version using Tkinter
+Multi-Language English Translator - GUI Version using Tkinter
+Supports: Telugu, Tamil, Hindi, Malayalam, and Kannada
 """
 
 import tkinter as tk
-from tkinter import scrolledtext, messagebox, filedialog
-from translator import EnglishToKannadaTranslator
+from tkinter import scrolledtext, messagebox, filedialog, ttk
+from translator import MultiLanguageTranslator
 
 
 class TranslatorGUI:
-    """GUI for English to Kannada Translator"""
+    """GUI for Multi-Language Translator"""
+    
+    SUPPORTED_LANGUAGES = {
+        'Kannada': 'kannada',
+        'Telugu': 'telugu',
+        'Tamil': 'tamil',
+        'Hindi': 'hindi',
+        'Malayalam': 'malayalam',
+    }
     
     def __init__(self, root):
         """Initialize the GUI"""
         self.root = root
-        self.root.title("English to Kannada Translator")
-        self.root.geometry("800x600")
-        self.translator = EnglishToKannadaTranslator()
+        self.root.title("Multi-Language Translator")
+        self.root.geometry("900x700")
+        self.selected_language = 'kannada'
+        self.translator = MultiLanguageTranslator('kannada')
         
         self.setup_ui()
     
@@ -24,10 +34,29 @@ class TranslatorGUI:
         # Title
         title_label = tk.Label(
             self.root,
-            text="English to Kannada Translator",
+            text="Multi-Language English Translator",
             font=("Arial", 16, "bold")
         )
         title_label.pack(pady=10)
+        
+        # Language selector frame
+        lang_frame = tk.Frame(self.root)
+        lang_frame.pack(pady=10)
+        
+        lang_label = tk.Label(lang_frame, text="Select Target Language:", font=("Arial", 10, "bold"))
+        lang_label.pack(side=tk.LEFT, padx=5)
+        
+        self.language_var = tk.StringVar(value="Kannada")
+        language_menu = ttk.Combobox(
+            lang_frame,
+            textvariable=self.language_var,
+            values=list(self.SUPPORTED_LANGUAGES.keys()),
+            state="readonly",
+            width=15,
+            font=("Arial", 10)
+        )
+        language_menu.pack(side=tk.LEFT, padx=5)
+        language_menu.bind("<<ComboboxSelected>>", self.on_language_change)
         
         # Input section
         input_label = tk.Label(self.root, text="English Text:", font=("Arial", 10, "bold"))
@@ -79,8 +108,8 @@ class TranslatorGUI:
         file_btn.grid(row=0, column=2, padx=5)
         
         # Output section
-        output_label = tk.Label(self.root, text="Kannada Translation:", font=("Arial", 10, "bold"))
-        output_label.pack(anchor="w", padx=10)
+        self.output_label = tk.Label(self.root, text="Kannada Translation:", font=("Arial", 10, "bold"))
+        self.output_label.pack(anchor="w", padx=10)
         
         self.output_text = scrolledtext.ScrolledText(
             self.root,
@@ -100,6 +129,14 @@ class TranslatorGUI:
             font=("Arial", 10, "bold")
         )
         copy_btn.pack(pady=5)
+    
+    def on_language_change(self, event=None):
+        """Handle language selection change"""
+        selected_name = self.language_var.get()
+        self.selected_language = self.SUPPORTED_LANGUAGES[selected_name]
+        self.translator = MultiLanguageTranslator(self.selected_language)
+        self.output_label.config(text=f"{selected_name} Translation:")
+        self.clear_text()
     
     def translate_text(self):
         """Translate the input text"""
@@ -143,10 +180,12 @@ class TranslatorGUI:
         if not input_file:
             return
         
+        lang_name = self.language_var.get().lower()
         output_file = filedialog.asksaveasfilename(
-            title="Save Kannada translation as",
+            title=f"Save {lang_name} translation as",
             filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
-            defaultextension=".txt"
+            defaultextension=".txt",
+            initialfile=f"{lang_name}_translation.txt"
         )
         
         if not output_file:

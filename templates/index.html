@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Translator | English to Kannada</title>
+    <title>Multi-Language Translator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -20,9 +20,21 @@
         </header>
 
         <section class="hero">
-            <h1>English to Kannada</h1>
-            <p>A calm, focused workspace for your translations. Paste text or upload documents to get started.</p>
+            <h1>Multi-Language Translator</h1>
+            <p>Translate English to Telugu, Tamil, Hindi, Malayalam, or Kannada. Paste text or upload documents to get started.</p>
         </section>
+
+        <!-- Language Selection -->
+        <div class="language-selector">
+            <label for="target_language">Select Target Language:</label>
+            <select id="target_language" name="target_language" onchange="updateLanguageLabel()">
+                <option value="kannada" {% if target_language == 'kannada' %}selected{% endif %}>Kannada</option>
+                <option value="telugu" {% if target_language == 'telugu' %}selected{% endif %}>Telugu</option>
+                <option value="tamil" {% if target_language == 'tamil' %}selected{% endif %}>Tamil</option>
+                <option value="hindi" {% if target_language == 'hindi' %}selected{% endif %}>Hindi</option>
+                <option value="malayalam" {% if target_language == 'malayalam' %}selected{% endif %}>Malayalam</option>
+            </select>
+        </div>
 
         <div class="tabs-container">
             <button class="tab-btn active" onclick="switchTab('text')">Text Translation</button>
@@ -42,7 +54,7 @@
                     <span class="panel-title">English Source</span>
                     <span class="char-count" id="char-count">0 characters</span>
                 </div>
-                <form id="translate-form" action="{{ url_for('translate_text') }}" method="POST">
+                <form id="translate-form" onsubmit="handleTranslate(event)">
                     <textarea name="source_text" id="source_text" placeholder="Enter English text here..." oninput="updateCharCount()">{{ source_text }}</textarea>
                     <div class="actions">
                         <button type="button" class="btn btn-ghost" onclick="loadSample()">Load Sample</button>
@@ -57,7 +69,7 @@
 
             <div class="panel">
                 <div class="panel-header">
-                    <span class="panel-title">Kannada Translation</span>
+                    <span class="panel-title" id="output-language">Kannada</span> <span>Translation</span>
                     <button class="btn btn-ghost" id="copy-btn" onclick="copyResult()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         Copy
@@ -67,7 +79,7 @@
                     {% if translation_text %}
                         {{ translation_text }}
                     {% else %}
-                        <span style="opacity: 0.4">Your Kannada translation will appear here...</span>
+                        <span style="opacity: 0.4" id="placeholder-text">Your translation will appear here...</span>
                     {% endif %}
                 </div>
             </div>
@@ -77,6 +89,7 @@
         <div id="file-workspace" class="workspace">
             <div class="file-workspace">
                 <form action="{{ url_for('translate_file') }}" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="target_language" id="file_target_language" value="{{ target_language if target_language else 'kannada' }}">
                     <div class="upload-zone" onclick="document.getElementById('input_file').click()">
                         <div class="upload-icon">
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
@@ -96,6 +109,58 @@
     </div>
 
     <script>
+        const languageNames = {
+            'kannada': 'Kannada',
+            'telugu': 'Telugu',
+            'tamil': 'Tamil',
+            'hindi': 'Hindi',
+            'malayalam': 'Malayalam'
+        };
+
+        function updateLanguageLabel() {
+            const selected = document.getElementById('target_language').value;
+            document.getElementById('output-language').innerText = languageNames[selected];
+            clearAll();
+        }
+
+        async function handleTranslate(event) {
+            event.preventDefault();
+            
+            const sourceText = document.getElementById('source_text').value.trim();
+            const targetLanguage = document.getElementById('target_language').value;
+            
+            if (!sourceText) {
+                alert('Please enter English text to translate.');
+                return;
+            }
+            
+            // Show loading state
+            const outputArea = document.getElementById('translation_output');
+            outputArea.innerHTML = '<span style="opacity: 0.6">Translating...</span>';
+            
+            try {
+                const formData = new FormData();
+                formData.append('source_text', sourceText);
+                formData.append('target_language', targetLanguage);
+                
+                const response = await fetch('{{ url_for("translate_text") }}', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    outputArea.innerHTML = data.translation;
+                } else {
+                    outputArea.innerHTML = `<span style="color: #ff6b6b;">Error: ${data.error}</span>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                outputArea.innerHTML = `<span style="color: #ff6b6b;">Error: ${error.message}</span>`;
+            }
+        }
+
         function switchTab(tab) {
             const textWorkspace = document.getElementById('text-workspace');
             const fileWorkspace = document.getElementById('file-workspace');
@@ -122,7 +187,8 @@
 
         function clearAll() {
             document.getElementById('source_text').value = '';
-            document.getElementById('translation_output').innerHTML = '<span style="opacity: 0.4">Your Kannada translation will appear here...</span>';
+            const lang = languageNames[document.getElementById('target_language').value];
+            document.getElementById('translation_output').innerHTML = `<span style="opacity: 0.4" id="placeholder-text">Your ${lang} translation will appear here...</span>`;
             updateCharCount();
         }
 
@@ -133,7 +199,8 @@
 
         async function copyResult() {
             const output = document.getElementById('translation_output').innerText;
-            if (output && !output.includes('Your Kannada translation will appear here')) {
+            const lang = languageNames[document.getElementById('target_language').value];
+            if (output && !output.includes(`Your ${lang} translation will appear here`)) {
                 try {
                     await navigator.clipboard.writeText(output);
                     const btn = document.getElementById('copy-btn');
@@ -149,13 +216,22 @@
         }
 
         function loadSample() {
-            const sampleText = 'Hello, how are you today? I hope everything is going well.';
-            document.getElementById('source_text').value = sampleText;
+            const samples = [
+                'Hello, how are you today?',
+                'Welcome to our translator application',
+                'Please translate this text to another language',
+                'The weather is beautiful today',
+                'Thank you very much for your help'
+            ];
+            const randomSample = samples[Math.floor(Math.random() * samples.length)];
+            document.getElementById('source_text').value = randomSample;
             updateCharCount();
         }
 
-        // Initialize char count on load
-        window.onload = updateCharCount;
+        // Initialize language on page load
+        window.addEventListener('load', function() {
+            updateLanguageLabel();
+        });
     </script>
 </body>
 </html>
