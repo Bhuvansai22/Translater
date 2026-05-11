@@ -54,6 +54,13 @@
                     <span class="panel-title">English Source</span>
                     <span class="char-count" id="char-count">0 characters</span>
                 </div>
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; align-items: center;">
+                    <button type="button" class="btn btn-ghost" id="mic-btn" onclick="toggleMicrophone()" title="Click to start speaking">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v12a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        Speak
+                    </button>
+                    <span id="mic-status" style="font-size: 0.75rem; color: var(--text-secondary); display: none;">Listening...</span>
+                </div>
                 <form id="translate-form" onsubmit="handleTranslate(event)">
                     <textarea name="source_text" id="source_text" placeholder="Enter English text here..." oninput="updateCharCount()">{{ source_text }}</textarea>
                     <div class="actions">
@@ -116,6 +123,68 @@
             'hindi': 'Hindi',
             'malayalam': 'Malayalam'
         };
+
+        // Speech Recognition Setup
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isListening = false;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.language = 'en-US';
+
+            recognition.onstart = function() {
+                isListening = true;
+                document.getElementById('mic-btn').style.color = '#10b981';
+                document.getElementById('mic-btn').style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.5)';
+                document.getElementById('mic-status').style.display = 'inline';
+            };
+
+            recognition.onresult = function(event) {
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        document.getElementById('source_text').value += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                if (interimTranscript) {
+                    document.getElementById('source_text').placeholder = 'Recognized: ' + interimTranscript;
+                }
+                updateCharCount();
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                document.getElementById('mic-status').textContent = 'Error: ' + event.error;
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                document.getElementById('mic-btn').style.color = 'var(--text-secondary)';
+                document.getElementById('mic-btn').style.boxShadow = 'none';
+                document.getElementById('mic-status').style.display = 'none';
+                document.getElementById('source_text').placeholder = 'Enter English text here...';
+            };
+        }
+
+        function toggleMicrophone() {
+            if (!recognition) {
+                alert('Speech Recognition is not supported in your browser.\nTry Chrome, Edge, or Safari.');
+                return;
+            }
+
+            if (isListening) {
+                recognition.stop();
+            } else {
+                document.getElementById('source_text').value = '';
+                recognition.start();
+            }
+        }
 
         function updateLanguageLabel() {
             const selected = document.getElementById('target_language').value;

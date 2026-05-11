@@ -291,6 +291,11 @@ textarea::placeholder {
   color: var(--text-primary);
 }
 
+#mic-btn {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
 /* File Upload Workspace */
 .file-workspace {
   max-width: 600px;
