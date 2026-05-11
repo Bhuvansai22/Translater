@@ -4,6 +4,8 @@ from io import BytesIO
 import json
 
 from flask import Flask, render_template, request, send_file, jsonify
+import asyncio
+import edge_tts
 
 from translator import MultiLanguageTranslator
 
@@ -118,6 +120,50 @@ def translate_file():
         download_name=f"{filename}.txt",
         mimetype="text/plain; charset=utf-8",
     )
+
+
+@app.post("/speak")
+def speak():
+    """Generate speech for the given text and language."""
+    text = request.form.get("text", "").strip()
+    lang = request.form.get("lang", "kannada").lower()
+    gender = request.form.get("gender", "female").lower()
+    
+    # Map to edge-tts voices
+    voice_map = {
+        'kannada': {'female': 'kn-IN-SapnaNeural', 'male': 'kn-IN-GaganNeural'},
+        'telugu': {'female': 'te-IN-ShrutiNeural', 'male': 'te-IN-MohanNeural'},
+        'tamil': {'female': 'ta-IN-PallaviNeural', 'male': 'ta-IN-ValluvarNeural'},
+        'hindi': {'female': 'hi-IN-SwaraNeural', 'male': 'hi-IN-MadhurNeural'},
+        'malayalam': {'female': 'ml-IN-SobhanaNeural', 'male': 'ml-IN-MidhunNeural'}
+    }
+    
+    lang_voices = voice_map.get(lang, voice_map['hindi'])
+    voice = lang_voices.get(gender, lang_voices['female'])
+    
+    if not text:
+        return jsonify({"success": False, "error": "No text provided"}), 400
+        
+    try:
+        # Create an event loop to run the async edge-tts
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        async def generate_speech():
+            communicate = edge_tts.Communicate(text, voice)
+            data = b""
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    data += chunk["data"]
+            return data
+
+        audio_data = loop.run_until_complete(generate_speech())
+        loop.close()
+        
+        fp = BytesIO(audio_data)
+        return send_file(fp, mimetype="audio/mpeg")
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 def main():

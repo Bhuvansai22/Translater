@@ -379,6 +379,48 @@ textarea::placeholder {
   animation: fadeIn 1s ease-out;
 }
 
+.language-selector, .voice-selector {
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.language-selector select {
+    padding: 0.75rem;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.gender-toggle {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.5rem 0;
+}
+
+.gender-toggle div {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.gender-toggle input[type="radio"] {
+    accent-color: var(--primary);
+    width: 1.2rem;
+    height: 1.2rem;
+    cursor: pointer;
+}
+
+.gender-toggle label {
+    cursor: pointer;
+    font-weight: 500;
+}
+
 .language-selector label {
   font-weight: 600;
   color: var(--text-secondary);
